@@ -13,6 +13,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.TextEvent;
 import java.awt.event.TextListener;
 import java.io.File;
+import java.util.Objects;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -36,6 +37,8 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
     private NeuroTableModel tableModel;
     private NeuroInputPainter painter;
     private JButton bAdd;
+    private JButton bCopy;
+    private JButton bDel;
     private JButton bSave;
 
     public NeuroTest() {
@@ -43,7 +46,7 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         initUI();
     }
 
-    private static final TrainingPair DEF_PAIR = new TrainingPair(4, 4, 0.3f, 0.7f);
+    private static final TrainingPair DEF_PAIR = new TrainingPair(4, 4, 0.0f, 0.0f);
 
     private static class TrainingPairCell extends JPanel {
 
@@ -111,7 +114,9 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         GridLayout gl = new GridLayout(2, 1);
         mainPanel.setLayout(gl);
         JScrollPane tablePane = new JScrollPane(t);
-        bAdd = new JButton("Add input");
+        bAdd = new JButton("Add");
+        bCopy = new JButton("Copy");
+        bDel = new JButton("Del");
         bSave = new JButton("Save");
         painter = new NeuroInputPainter();
 
@@ -122,10 +127,14 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         JPanel buttonpanel = new JPanel();
         buttonpanel.setLayout(new FlowLayout());
         buttonpanel.add(bAdd);
+        buttonpanel.add(bCopy);
+        buttonpanel.add(bDel);
         buttonpanel.add(bSave);
         buttonpanel.add(valInput);
 
         bAdd.addActionListener(this);
+        bCopy.addActionListener(this);
+        bDel.addActionListener(this);
         bSave.addActionListener(this);
         BorderLayout bl = new BorderLayout();
         setLayout(bl);
@@ -148,6 +157,14 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         if (e.getSource() == bAdd) {
             log.debug("Adding new training pair");
             tableModel.add(DEF_PAIR.clone());
+        } else if (e.getSource() == bCopy) {
+            int selrow = t.getSelectedRow();
+            if (selrow != -1) {
+                tableModel.add(tableModel.get(selrow).clone());
+            }
+        } else if (e.getSource() == bDel) {
+            int selrow = t.getSelectedRow();
+            tableModel.delete(selrow);
         } else if (e.getSource() == bSave) {
             try {
                 tableModel.save(DATAFILE);
@@ -168,10 +185,13 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
 
     @Override
     public void valueChanged(ListSelectionEvent e) {
-        TrainingPair pair = (TrainingPair) tableModel.getValueAt(e.getFirstIndex(), 1);
-        log.debug("training pair selected:\n" + pair);
-        painter.setCurrentPair(pair);
-        painter.repaint();
+        int selectedRow = t.getSelectedRow();
+        if (!e.getValueIsAdjusting() && selectedRow != -1) {
+            TrainingPair pair = (TrainingPair) tableModel.getValueAt(selectedRow, 1);
+            log.debug("training pair {} selected: {}\n{}", Integer.toHexString(Objects.hashCode(pair)), selectedRow, pair);
+            painter.setCurrentPair(pair);
+            painter.repaint();
+        }
     }
 
 }

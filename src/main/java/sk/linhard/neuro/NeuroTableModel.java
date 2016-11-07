@@ -11,6 +11,9 @@ import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.io.Files;
 
 public class NeuroTableModel extends AbstractTableModel {
@@ -32,8 +35,10 @@ public class NeuroTableModel extends AbstractTableModel {
                 return new ArrayList<>();
             } else {
                 List<TrainingPair> r = new ArrayList<>(numItems);
-                TrainingPair pair = (TrainingPair) oin.readObject();
-                r.add(pair);
+                for (int i = 0; i < numItems; i++) {
+                    TrainingPair pair = (TrainingPair) oin.readObject();
+                    r.add(pair);
+                }
                 return r;
             }
         } catch (Exception e) {
@@ -54,6 +59,10 @@ public class NeuroTableModel extends AbstractTableModel {
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         return columnIndex == 0 ? rowIndex : items.get(rowIndex);
+    }
+
+    public TrainingPair get(int row) {
+        return items.get(row);
     }
 
     public void add(TrainingPair item) {
@@ -79,6 +88,16 @@ public class NeuroTableModel extends AbstractTableModel {
             }
             dos.flush();
             return bos.toByteArray();
+        }
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(NeuroTableModel.class);
+
+    public void delete(int index) {
+        if (index < items.size()) {
+            log.debug("Deleting item {}", index);
+            items.remove(index);
+            fireTableRowsDeleted(index, index);
         }
     }
 }

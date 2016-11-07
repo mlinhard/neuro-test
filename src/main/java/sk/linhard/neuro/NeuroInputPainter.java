@@ -7,6 +7,7 @@ import java.awt.Point;
 import java.awt.TextField;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.TextEvent;
 import java.awt.event.TextListener;
 
@@ -15,7 +16,7 @@ import javax.swing.JPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NeuroInputPainter extends JPanel implements MouseListener, TextListener {
+public class NeuroInputPainter extends JPanel implements MouseListener, MouseMotionListener, TextListener {
 
     private static final Logger log = LoggerFactory.getLogger(NeuroInputPainter.class);
 
@@ -64,6 +65,7 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
         pairPainter = new TrainingPairPainter(numRows, numCols, boxSize, boxSpacing, startInputX, startInputY);
         setBackground(Color.BLACK);
         addMouseListener(this);
+        addMouseMotionListener(this);
     }
 
     public void setCurrentPair(TrainingPair currentPair) {
@@ -95,12 +97,8 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
         }
     }
 
-    @Override
-    public void mouseClicked(MouseEvent e) {
-        log.debug("x: " + e.getX() + ", y:" + e.getY());
-        int my = e.getY();
+    private void mouse(int mx, int my) {
         if (my >= startInputY && my <= endInputY) {
-            int mx = e.getX();
             if (mx >= startInputX && mx <= endInputX) {
                 int basex = mx - startInputX;
                 int basey = my - startInputY;
@@ -113,12 +111,11 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
                 if (rowmod <= boxSpacing || colmod <= boxSpacing || row >= numRows || col >= numCols) {
                     clicked = null;
                     clickedDim = null;
-                    System.out.println("out of box click");
+                    log.trace("out of box click");
                 } else {
                     clicked = new Point(startInputX + gridsize * row + boxSpacing + 1,
                             startInputY + gridsize * col + boxSpacing + 1);
                     clickedDim = new Dimension(boxSize, boxSize);
-
                     vectorClicked(row, col, true);
                 }
             } else if (mx >= startOutputX && mx <= endOutputX) {
@@ -155,6 +152,11 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
     }
 
     @Override
+    public void mouseClicked(MouseEvent e) {
+
+    }
+
+    @Override
     public void textValueChanged(TextEvent e) {
         TextField f = (TextField) e.getSource();
         String text = f.getText();
@@ -167,14 +169,13 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
             }
             repaint();
         } catch (Exception ex) {
-
+            log.trace("Error " + ex.getMessage());
         }
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-        // TODO Auto-generated method stub
-
+        mouse(e.getX(), e.getY());
     }
 
     @Override
@@ -191,6 +192,17 @@ public class NeuroInputPainter extends JPanel implements MouseListener, TextList
 
     @Override
     public void mouseExited(MouseEvent e) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        mouse(e.getX(), e.getY());
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
         // TODO Auto-generated method stub
 
     }
