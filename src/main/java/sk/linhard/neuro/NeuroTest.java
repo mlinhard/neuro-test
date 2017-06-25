@@ -28,7 +28,9 @@ import javax.swing.table.DefaultTableCellRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NeuroTest extends JFrame implements ActionListener, TextListener, ListSelectionListener {
+import Jama.Matrix;
+
+public class NeuroTest extends JFrame implements ActionListener, TextListener, ListSelectionListener, OutputComputer {
 
     private final static File DATAFILE = new File("training.dat");
 
@@ -36,10 +38,14 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
     private JTable t;
     private NeuroTableModel tableModel;
     private NeuroInputPainter painter;
+    private NeuroInputPainter painterExec;
     private JButton bAdd;
     private JButton bCopy;
     private JButton bDel;
     private JButton bSave;
+    private JButton b0;
+    private JButton b1;
+    private TextField valInput;
 
     public NeuroTest() {
 
@@ -111,17 +117,22 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         selmodel.addListSelectionListener(this);
 
         JPanel mainPanel = new JPanel();
-        GridLayout gl = new GridLayout(2, 1);
+        GridLayout gl = new GridLayout(3, 1);
         mainPanel.setLayout(gl);
         JScrollPane tablePane = new JScrollPane(t);
         bAdd = new JButton("Add");
         bCopy = new JButton("Copy");
         bDel = new JButton("Del");
         bSave = new JButton("Save");
-        painter = new NeuroInputPainter();
+        b0 = new JButton("0");
+        b1 = new JButton("1");
+        painter = new NeuroInputPainter(null);
+        painterExec = new NeuroInputPainter(this);
+        painterExec.setCurrentPair(new TrainingPair(4, 4, 0f, 0f));
 
-        TextField valInput = new TextField("1.00");
+        valInput = new TextField("1.00");
         valInput.addTextListener(painter);
+        valInput.addTextListener(painterExec);
         valInput.setSize(140, 50);
 
         JPanel buttonpanel = new JPanel();
@@ -130,18 +141,24 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         buttonpanel.add(bCopy);
         buttonpanel.add(bDel);
         buttonpanel.add(bSave);
+        buttonpanel.add(b0);
+        buttonpanel.add(b1);
         buttonpanel.add(valInput);
 
         bAdd.addActionListener(this);
         bCopy.addActionListener(this);
         bDel.addActionListener(this);
         bSave.addActionListener(this);
+        b0.addActionListener(this);
+        b1.addActionListener(this);
         BorderLayout bl = new BorderLayout();
         setLayout(bl);
         add(buttonpanel, BorderLayout.PAGE_START);
         add(mainPanel, BorderLayout.CENTER);
         mainPanel.add(tablePane);
         mainPanel.add(painter);
+        mainPanel.add(painterExec);
+
     }
 
     public static void main(String[] args) {
@@ -150,6 +167,55 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
             NeuroTest ex = new NeuroTest();
             ex.setVisible(true);
         });
+    }
+
+    @Override
+    public NeuroVector compute(NeuroVector input) {
+        int n = tableModel.getRowCount();
+        double[][] x = new double[n - 1][];
+        double[][] y = new double[n - 1][];
+        for (int i = 0; i < n - 1; i++) {
+            TrainingPair pair = tableModel.get(i);
+            x[i] = pair.getIn().toDoubleVector();
+            y[i] = pair.getOut().toDoubleVector();
+        }
+
+        Matrix X = Matrix.constructWithCopy(x).transpose();
+        Matrix Y = Matrix.constructWithCopy(y).transpose();
+
+        try {
+            Matrix Xtr = X.transpose();
+            Matrix Xplus = null;
+            if (X.getRowDimension() < Y.getColumnDimension()) {
+                Xplus = Xtr.times(X.times(Xtr).inverse());
+            } else if (X.getRowDimension() > Y.getColumnDimension()) {
+                Xplus = Xtr.times(X).inverse().times(Xtr);
+            } else {
+                Xplus = X.inverse();
+            }
+
+            Matrix W = Y.times(Xplus);
+            Matrix in = Matrix.constructWithCopy(new double[][] { input.toDoubleVector() }).transpose();
+            Matrix out = W.times(in);
+
+            float[] v = new float[out.getRowDimension()];
+            for (int i = 0; i < v.length; i++) {
+                v[i] = (float) out.get(i, 0);
+                if (v[i] < 0) {
+                    v[i] = 0;
+                }
+                if (v[i] > 1) {
+                    v[i] = 1;
+                }
+            }
+
+            X.times(Xplus.times(X)).print(4, 2);
+
+            return new NeuroVector(v);
+        } catch (RuntimeException e) {
+            log.debug("Couldn't compute: " + e.getMessage(), e);
+        }
+        return null;
     }
 
     @Override
@@ -165,6 +231,10 @@ public class NeuroTest extends JFrame implements ActionListener, TextListener, L
         } else if (e.getSource() == bDel) {
             int selrow = t.getSelectedRow();
             tableModel.delete(selrow);
+        } else if (e.getSource() == b0) {
+            valInput.setText("0");
+        } else if (e.getSource() == b1) {
+            valInput.setText("1");
         } else if (e.getSource() == bSave) {
             try {
                 tableModel.save(DATAFILE);

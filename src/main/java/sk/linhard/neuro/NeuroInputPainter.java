@@ -44,8 +44,10 @@ public class NeuroInputPainter extends JPanel implements MouseListener, MouseMot
     private TrainingPair currentPair;
 
     private final TrainingPairPainter pairPainter;
+    private OutputComputer computer;
 
-    public NeuroInputPainter() {
+    public NeuroInputPainter(OutputComputer computer) {
+        this.computer = computer;
         displayClicked = false;
         startInputX = 30;
         startInputY = 30;
@@ -93,6 +95,12 @@ public class NeuroInputPainter extends JPanel implements MouseListener, MouseMot
             NeuroVector v = input ? currentPair.getIn() : currentPair.getOut();
             if (idx < v.data.length) {
                 v.data[idx] = currentColor;
+            }
+            if (computer != null) {
+                NeuroVector computed = computer.compute(currentPair.getIn());
+                if (computed != null) {
+                    currentPair.getOut().data = computed.data;
+                }
             }
         }
     }
